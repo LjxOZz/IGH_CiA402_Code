@@ -16,19 +16,19 @@ add_compile_options(
 # -------------------------- 头文件路径配置 --------------------------
 include_directories(
     .           # 当前目录
-    ./include   # 包含test.hpp
+    ./include   # 包含 .h
     /include    # EtherCAT头文件路径
 )
 
 # -------------------------- 源文件配置（核心：包含所有文件） --------------------------
 set(SOURCES
     ./main.c
-    ./src/test.c
+    ./src/igh_coe_motor.c
 )
 
 set(HEADERS
     ./main.c
-    ./include/test.h
+    ./include/igh_coe_motor.h
 )
 
 # -------------------------- 链接库配置 --------------------------
