@@ -163,11 +163,11 @@ int is_all_slave_op()
 */
 void CiA402_Init(void) {
     // struct timespec    wakeup_time, time;
-    static uint32_t     actual_position_value = 0;
-    static uint32_t     actual_Speed_value = 0;
-    static uint8_t      mode = 0;
-
-    uint16_t            status_word;
+    static uint8_t  mode = 0;
+    
+    static int32_t  actual_position_value = 0;
+    static int32_t  actual_Speed_value = 0;
+    static uint16_t status_word;
 
     /* receive process data */
     if (counter_10s) {counter_10s--;} /* 每10秒检查一次主站状态 */
@@ -218,18 +218,15 @@ void CiA402_Init(void) {
             if (is_all_slave_op()) {
                 
                 mode = 4;
-                actual_position_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualPos);
-                actual_Speed_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualSpe);
+                // actual_position_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualPos);
+                // actual_Speed_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualSpe);
+                actual_position_value = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
+                actual_Speed_value = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
 
-                EC_WRITE_U32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].TargetPosition, 0);
-                
-                EC_WRITE_U32(ecrt_sdo_request_data(psdo_profile_velocity), 1000000);
-                ecrt_sdo_request_write(psdo_profile_velocity);
-
-                // EC_WRITE_U32(ecrt_sdo_request_data(psdo_profile_acce), 100);
-                // ecrt_sdo_request_write(psdo_profile_velocity);
-                // EC_WRITE_U32(ecrt_sdo_request_data(psdo_profile_dece), 100);
-                // ecrt_sdo_request_write(psdo_profile_velocity);
+                write_pdo_u32(masters[0].slave_offsets[0].TargetPosition, 0);   // ??
+                if (write_sdo_u32(psdo_profile_velocity, 100000)) {             // ??
+                    fprintf(stderr, "Failed write_sdo_u32");
+                }
 
                 EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x3F);
                 

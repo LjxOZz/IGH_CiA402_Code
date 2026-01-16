@@ -1,4 +1,6 @@
 #include "main.h"
+#include "asm-generic/errno-base.h"
+#include "asm-generic/errno.h"
 
 static ec_master_state_t smaster_state = {};
 static ec_domain_state_t sdomain_state = {};
@@ -97,13 +99,53 @@ void check_master_slave_state(void) {
     sslave_state = ss;
 }
 /**
+ * @brief   PDO 写寄存器
+ * @param sdo  主站0,通信域0, PDO发送的偏移量
+ * @param value 发送的值
+ * @return  成功:0 失败:-1
+ */
+int write_pdo_u32(unsigned int pdo, uint32_t value) {
+
+    EC_WRITE_U32(masters[0].pdomain_pds[0] + pdo, value);
+    //写完之后再读, 看有没有设置成功
+
+    // if (ret == -EINVAL) {
+    //     fprintf(stderr, "Invalid input data");
+    // }
+    // else if (ret == -ENOBUFS) {
+    //     fprintf(stderr, "Reserved memory in ecrt_slave_config_create_sdo_request() too small");
+    // }
+    return 0;
+}
+
+/**
+ * @brief   PDO 读寄存器
+ * @param sdo  主站0,通信域0, PDO发送的偏移量
+ * @return  读到的值
+ */
+int32_t read_pdo_s32(unsigned int pdo) {
+    return EC_READ_S32(masters[0].pdomain_pds[0] + pdo);
+}
+/**
+ * @brief   SDO 写寄存器
+ * @param psdo  SDO请求结构体指针
+ * @param value 发送的值
+ * @return  成功:0 失败:-1
+ */
+int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value) {
+    int ret = 0;
+
+    EC_WRITE_U32(ecrt_sdo_request_data(psdo), value);
+
+    return ret = ecrt_sdo_request_write(psdo);
+}
+/**
  * @brief   初始化配置一个从站
  * @param void 
  * @return  成功:0 失败:-1
  */
 int ecrt_init(void) {
     
-
     // 1.请求 EtherCAT 主站
     masters[0].pmaster = ecrt_request_master(0);
     if (!masters[0].pmaster) {

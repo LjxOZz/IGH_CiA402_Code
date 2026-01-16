@@ -132,6 +132,13 @@ typedef struct S_PdoEntryConfig
 
 int ecrt_init(void);
 
+int write_pdo_u32(unsigned int pdo, uint32_t value);
+int32_t read_pdo_s32(unsigned int pdo);
+
+int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value);
+
+
+
 void check_master_state(ec_master_t *pmaster);
 void check_domain_state(ec_domain_t *pdomain);
 void check_master_slave_state(void);
