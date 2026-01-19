@@ -98,33 +98,74 @@ void check_master_slave_state(void) {
             0, ss.al_state, ss.online, ss.operational);
     sslave_state = ss;
 }
-/**
- * @brief   PDO 写寄存器
- * @param sdo  主站0,通信域0, PDO发送的偏移量
- * @param value 发送的值
- * @return  成功:0 失败:-1
- */
-int write_pdo_u32(unsigned int pdo, uint32_t value) {
 
-    EC_WRITE_U32(masters[0].pdomain_pds[0] + pdo, value);
-    //写完之后再读, 看有没有设置成功
-
-    // if (ret == -EINVAL) {
-    //     fprintf(stderr, "Invalid input data");
-    // }
-    // else if (ret == -ENOBUFS) {
-    //     fprintf(stderr, "Reserved memory in ecrt_slave_config_create_sdo_request() too small");
-    // }
-    return 0;
-}
 
 /**
  * @brief   PDO 读寄存器
  * @param sdo  主站0,通信域0, PDO发送的偏移量
  * @return  读到的值
  */
+uint8_t read_pdo_u8(unsigned int pdo) {
+    return EC_READ_U8(masters[0].pdomain_pds[0] + pdo);
+}
+uint16_t read_pdo_u16(unsigned int pdo) {
+    return EC_READ_U16(masters[0].pdomain_pds[0] + pdo);
+}
 int32_t read_pdo_s32(unsigned int pdo) {
     return EC_READ_S32(masters[0].pdomain_pds[0] + pdo);
+}
+uint32_t read_pdo_u32(unsigned int pdo) {
+    return EC_READ_U32(masters[0].pdomain_pds[0] + pdo);
+}
+
+/**
+ * @brief   PDO 写寄存器
+ * @param sdo  主站0,通信域0, PDO发送的偏移量
+ * @param value 发送的值
+ * @return  成功:0 失败:-1
+ */
+int write_pdo_u8(unsigned int pdo, uint8_t value) {
+
+    EC_WRITE_U8(masters[0].pdomain_pds[0] + pdo, value);
+    if(read_pdo_u8(pdo) != value) {
+        return -1;
+    }
+    return 0;
+}
+int write_pdo_u16(unsigned int pdo, uint16_t value) {
+
+    EC_WRITE_U16(masters[0].pdomain_pds[0] + pdo, value);
+    if(read_pdo_u16(pdo) != value) {
+        return -1;
+    }
+    return 0;
+}
+int write_pdo_u32(unsigned int pdo, uint32_t value) {
+
+    EC_WRITE_U32(masters[0].pdomain_pds[0] + pdo, value);
+    if(read_pdo_u32(pdo) != value) {
+        return -1;
+    }
+    return 0;
+}
+/**
+ * @brief   SDO 读寄存器
+ * @param psdo  SDO请求结构体指针
+ * @return  成功:读到的值 失败: -1
+ */
+uint32_t read_sdo_u32(ec_sdo_request_t *psdo) {
+
+    ec_request_state_t state;
+    // 1.获取当前状态
+    state = ecrt_sdo_request_state(psdo);
+    if (state == EC_REQUEST_BUSY) {
+        return -1;
+    }
+    // 2.读
+    if (ecrt_sdo_request_read(psdo)) {
+        return -2;
+    }
+    return EC_READ_U32(ecrt_sdo_request_data(psdo));
 }
 /**
  * @brief   SDO 写寄存器
@@ -133,11 +174,15 @@ int32_t read_pdo_s32(unsigned int pdo) {
  * @return  成功:0 失败:-1
  */
 int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value) {
-    int ret = 0;
-
+    ec_request_state_t state;
+    // 1.获取当前状态
+    state = ecrt_sdo_request_state(psdo);
+    if (state == EC_REQUEST_BUSY) {
+        return -1;
+    }
+    // 2.写
     EC_WRITE_U32(ecrt_sdo_request_data(psdo), value);
-
-    return ret = ecrt_sdo_request_write(psdo);
+    return ecrt_sdo_request_write(psdo);
 }
 /**
  * @brief   初始化配置一个从站

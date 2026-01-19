@@ -166,8 +166,10 @@ void CiA402_Init(void) {
     static uint8_t  mode = 0;
     
     static int32_t  actual_position_value = 0;
-    static int32_t  actual_Speed_value = 0;
-    static uint16_t status_word;
+    static int32_t  actual_speed_value = 0;
+    static uint16_t status_word = 0;
+    static uint32_t profile_velocity = 0;
+    static int32_t  target_position_value = 0;
 
     /* receive process data */
     if (counter_10s) {counter_10s--;} /* 每10秒检查一次主站状态 */
@@ -188,13 +190,13 @@ void CiA402_Init(void) {
 
         if (mode == 0) {
             // 1.复位
-            EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x80);
+            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x80);
 
             mode = 1;
         }else if (mode == 1) {
-            // 2.使能电压, 快速停止, 设置Pp模式
-            EC_WRITE_U8(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].OperationMode, (uint8_t)PpMode);
-            EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x06);
+            // 2.使能电压, 快速停止, 设置Pp模式 
+            write_pdo_u8(masters[0].slave_offsets[0].OperationMode, (uint8_t)PpMode);
+            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x06);
 
             status_word = masters[0].slave_values[0].StatusWord;
             if (status_word & 0x21) {
@@ -203,35 +205,40 @@ void CiA402_Init(void) {
             }
         }else if (mode == 2) {
             // 3.使能操作
-            EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x07);
+            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x07);
+
             mode = 3;
         }else if (mode == 3) {
             // 4.
-            actual_position_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualPos);
-            actual_Speed_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualSpe);
-            printf("cyclic_task: mode3 pos==%d, spe==%d\n", actual_position_value, actual_Speed_value);
+            actual_position_value = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
+            actual_speed_value = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
+            printf("cyclic_task: mode3 pos==%d, spe==%d\n", actual_position_value, actual_speed_value);
 
-            EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x2F);
+            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x2F);
+
+            if (write_pdo_u32(masters[0].slave_offsets[0].TargetPosition, 0)) { // ??
+                fprintf(stderr, "Failed TargetPosition write_sdo_u32");
+            }
+            if (write_sdo_u32(psdo_profile_velocity, 100000)) {                 // ??
+                fprintf(stderr, "Failed profile_velocity write_sdo_u32");
+            }
+
             mode = 4;
         }else if (mode == 4) {
             printf("Mode4\n");
             if (is_all_slave_op()) {
-                
                 mode = 4;
-                // actual_position_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualPos);
-                // actual_Speed_value = EC_READ_S32(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ActualSpe);
-                actual_position_value = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
-                actual_Speed_value = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
+                actual_position_value   = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
+                actual_speed_value      = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
+                target_position_value   = read_pdo_s32(masters[0].slave_offsets[0].TargetPosition);
 
-                write_pdo_u32(masters[0].slave_offsets[0].TargetPosition, 0);   // ??
-                if (write_sdo_u32(psdo_profile_velocity, 100000)) {             // ??
-                    fprintf(stderr, "Failed write_sdo_u32");
-                }
+                profile_velocity = read_sdo_u32(psdo_profile_velocity);
 
-                EC_WRITE_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord, 0x3F);
-                
-                printf("cyclic_task: mode4 pos==%d, spe==%d\n", actual_position_value, actual_Speed_value);
-                printf("-------------is_all_slave_op-------------\n");
+                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x3F);
+                printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
+                    target_position_value, actual_position_value, profile_velocity, actual_speed_value);
+
+                // printf("-------------is_all_slave_op-------------\n");
             }
         }
 
@@ -242,11 +249,9 @@ void CiA402_Init(void) {
     }
     
     // write process data
-    
-
-    masters[0].slave_values[0].StatusWord = EC_READ_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].StatusWord);
-    masters[0].slave_values[0].ControlWord = EC_READ_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ControlWord);
-    masters[0].slave_values[0].ErrorStatus = EC_READ_U16(masters[0].pdomain_pds[0] + masters[0].slave_offsets[0].ErrorStatus);
+    masters[0].slave_values[0].StatusWord = read_pdo_u16(masters[0].slave_offsets[0].StatusWord);
+    masters[0].slave_values[0].ControlWord = read_pdo_u16(masters[0].slave_offsets[0].ControlWord);
+    masters[0].slave_values[0].ErrorStatus = read_pdo_u16(masters[0].slave_offsets[0].ErrorStatus);
 
     /* */
 #ifdef dc_user

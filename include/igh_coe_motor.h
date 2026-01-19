@@ -132,8 +132,18 @@ typedef struct S_PdoEntryConfig
 
 int ecrt_init(void);
 
+/* pdo operation */
+uint8_t     read_pdo_u8(unsigned int pdo);
+uint16_t    read_pdo_u16(unsigned int pdo);
+uint32_t    read_pdo_u32(unsigned int pdo);
+int32_t     read_pdo_s32(unsigned int pdo);
+
+int write_pdo_u8(unsigned int pdo, uint8_t value);
+int write_pdo_u16(unsigned int pdo, uint16_t value);
 int write_pdo_u32(unsigned int pdo, uint32_t value);
-int32_t read_pdo_s32(unsigned int pdo);
+
+/* sdo operation */
+uint32_t read_sdo_u32(ec_sdo_request_t *psdo);
 
 int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value);
 
