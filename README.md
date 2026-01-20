@@ -3,6 +3,7 @@
 这是一个Demo:
 - 使用EnterCAT控制电机 Pp模式运动
 - 目前只控制了一个电机, 但留了多主站,多从站的接口(没有写对应的处理API)
+- 添加Cpp封装框架
 
 # 目前的API
 **igh_coe_motor.h** 文件的API简介:
@@ -32,7 +33,8 @@ sudo modprobe ec_generic
 
 mkdir build && cd build
 cmake ..
-sudo ./rt_posix_demo
+sudo ./tests/test_c/c_igh_test
+sudo ./tests/test_c/cpp_igh_test
 ```
 
 

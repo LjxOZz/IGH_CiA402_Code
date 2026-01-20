@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 
 #include <sched.h>
-
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -11,7 +10,6 @@
 #include <stdint.h>
 
 #include "main.h"
-
 
 /*
 EnterCAT 启动命令
@@ -40,60 +38,6 @@ sudo modprobe ec_generic
 /* **************************************************** 全局变量 **************************************************** */
 #pragma pack(push, 1)   // 开启 1 字节对齐
 
-/* Master 0, Slave 0, "TC200E TR CoE Drive"
- * Vendor ID:       0x00075500
- * Product code:    0x00000001
- * Revision number: 0x00000005
- * 使用sudo ethercat cstruct命令生成
- */
-ec_pdo_entry_info_t slave_0_pdo_entries[] = {
-    {0x6071, 0x00, 16},
-    {0x6040, 0x00, 16},
-    {0x607a, 0x00, 32},
-    {0x60ff, 0x00, 32},
-    {0x6060, 0x00, 8},
-    {0x603f, 0x00, 16},
-    {0x6041, 0x00, 16},
-    {0x6064, 0x00, 32},
-    {0x606c, 0x00, 32},
-    {0x6077, 0x00, 16},
-};
-
-ec_pdo_info_t slave_0_pdos[] = {
-    {0x1601, 5, slave_0_pdo_entries + 0}, /* 2st Receive  PDO Mapping */
-    {0x1a01, 5, slave_0_pdo_entries + 5}, /* 2st Transmit PDO Mapping */
-};
-
-ec_sync_info_t slave_0_syncs[] = {
-    {0, EC_DIR_OUTPUT, 0, NULL, EC_WD_DISABLE},
-    {1, EC_DIR_INPUT, 0, NULL, EC_WD_DISABLE},
-    {2, EC_DIR_OUTPUT, 1, slave_0_pdos + 0, EC_WD_DISABLE},
-    {3, EC_DIR_INPUT, 1, slave_0_pdos + 1, EC_WD_DISABLE},
-    {0xff}
-};
-/**
- * @brief 预定义的从站配置
- */
-S_SlaveConfig slave_configs[] = {
-    // 第一个从站设备: 伺服驱动器
-    {
-        .vendor_id = 0x00075500,
-        .product_code = 0x00000001,
-        .name = "TC Servo Drive",
-        .sync_count = (sizeof(slave_0_syncs) / sizeof(slave_0_syncs[0])),
-        .pdoEntryCount = (sizeof(slave_0_pdo_entries) / sizeof(slave_0_pdo_entries[0])),
-        .pdos = slave_0_pdos,
-        .syncs = slave_0_syncs,
-        .pEntry = slave_0_pdo_entries,
-    },
-    // 第一个从站设备: xxxx
-
-    // 添加更多从站配置...
-};
-/**
- * @brief Manage all EnterCAT hosts of this host
- */
-S_EthercatMaster masters[D_MASTER_AMOUNT];
 
 
 static unsigned int counter_01s = 0;
@@ -141,22 +85,7 @@ void custom_task();
 /*****************************************************************************/
 
 
-/*
-把这个函数和 void check_master_slave_state(void) 封装到一起
-*/
-static ec_slave_config_state_t ssc_ana_in_state = {};
-int is_all_slave_op()
-{
-    int opCount = 0;
 
-    ecrt_slave_config_state(masters[0].pslave_configs[0], &ssc_ana_in_state);
-    if (ssc_ana_in_state.operational) {
-        opCount++;
-    }
-
-    if ( opCount == 1 ) {return 1;}
-    else {return 0;}
-}
 
 /*
  Pp 模式 测试任务

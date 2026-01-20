@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include "ecrt.h" 
 
+/* Cpp 封装 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * @brief 主机上的EnterCAT接口数
  */
@@ -128,8 +134,6 @@ typedef struct S_PdoEntryConfig
 } S_PdoEntryConfig;
 
 
-/*  */
-
 int ecrt_init(void);
 
 /* pdo operation */
@@ -144,18 +148,21 @@ int write_pdo_u32(unsigned int pdo, uint32_t value);
 
 /* sdo operation */
 uint32_t read_sdo_u32(ec_sdo_request_t *psdo);
-
 int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value);
-
-
 
 void check_master_state(ec_master_t *pmaster);
 void check_domain_state(ec_domain_t *pdomain);
 void check_master_slave_state(void);
+int is_all_slave_op();
 
 extern ec_sdo_request_t *psdo_profile_velocity;
 extern ec_sdo_request_t *psdo_profile_acce;
 extern ec_sdo_request_t *psdo_profile_dece;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

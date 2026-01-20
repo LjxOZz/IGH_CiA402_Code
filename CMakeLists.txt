@@ -1,59 +1,35 @@
-# 指定CMake最低版本要求
+# [[    静态库:开始构建    ]]
+# [[    目标 = 库 或 可执行文件     ]]
 cmake_minimum_required(VERSION 3.10)
 
-project(rt_posix_demo C)
+project(rt_posix_demo VERSION 1.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_compile_options(-O2 -g -Wall)
 
-# -------------------------- 编译选项配置 --------------------------
-add_compile_options(
-    -O2
-    -g
-    -Wall
+# 核心库源码
+set(CORE_SOURCES src/igh_coe_motor.c)
+
+# 构建核心静态库
+add_library(igh_coe_motor STATIC ${CORE_SOURCES})
+
+# 头文件路径: 全局生效(指令之后的所有「目标」都继承这个路径)
+# include_directories(
+#     /include                        # igh库头文件路径
+#     ${PROJECT_SOURCE_DIR}/include   # 本地路径
+# )
+
+# 头文件路径: 仅对指定「目标」生效，局部可控
+target_include_directories(igh_coe_motor PUBLIC
+    /include                        # igh库头文件路径
+    ${PROJECT_SOURCE_DIR}/include   # 本地路径
 )
 
-# -------------------------- 头文件路径配置 --------------------------
-include_directories(
-    .           # 当前目录
-    ./include   # 包含 .h
-    /include    # EtherCAT头文件路径
-)
+# [[    静态库:结束构建    ]]
 
-# -------------------------- 源文件配置（核心：包含所有文件） --------------------------
-set(SOURCES
-    ./main.c
-    ./src/igh_coe_motor.c
-)
-
-set(HEADERS
-    ./main.c
-    ./include/igh_coe_motor.h
-)
-
-# -------------------------- 链接库配置 --------------------------
-# link_directories(/usr/local/etherlab/lib) # 根据实际路径启用
-
-# 要链接的库列表
-set(LIBS
-    ethercat  # -lethercat
-    # pthread   # -lpthread
-    # rt        # -lrt
-)
-
-# -------------------------- 生成可执行文件 --------------------------
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-
-# 链接所需的库
-target_link_libraries(${PROJECT_NAME} ${LIBS})
-
-# -------------------------- 自定义目标 --------------------------
-add_custom_target(info
-    COMMAND echo "CFLAGS: ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}"
-    COMMAND echo "CXXFLAGS: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}" # 新增：显示C++编译选项
-    COMMAND echo "LDFLAGS: ${CMAKE_EXE_LINKER_FLAGS}"
-    COMMAND echo "Xenomai version:" && [ -x "$(command -v xeno-config)" ] && xeno-config --version || echo "xeno-config not found"
-    COMMAND echo "EtherCAT library:" && ls -la /usr/local/ethercat/lib/libethercat.* 2>/dev/null || echo "EtherCAT library not found"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Showing build information"
-)
+# 进入tests目录构建测试程序
+add_subdirectory(tests/test_c)
+add_subdirectory(tests/test_cpp)
