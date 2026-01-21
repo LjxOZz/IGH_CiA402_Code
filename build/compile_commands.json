@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/nvidia/ct_driver/IGH_CiA402_Code/build",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc -D_GNU_SOURCE -I/include -I/home/nvidia/ct_driver/IGH_CiA402_Code/include -g -O2 -g -Wall -std=gnu99 -o CMakeFiles/igh_lib.dir/src/igh_coe_motor.c.o -c /home/nvidia/ct_driver/IGH_CiA402_Code/src/igh_coe_motor.c",
+  "file": "/home/nvidia/ct_driver/IGH_CiA402_Code/src/igh_coe_motor.c"
+},
+{
+  "directory": "/home/nvidia/ct_driver/IGH_CiA402_Code/build",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc -D_GNU_SOURCE -I/include -I/home/nvidia/ct_driver/IGH_CiA402_Code/include -g -O2 -g -Wall -std=gnu99 -o CMakeFiles/igh_lib.dir/src/igh_rt_operation.c.o -c /home/nvidia/ct_driver/IGH_CiA402_Code/src/igh_rt_operation.c",
+  "file": "/home/nvidia/ct_driver/IGH_CiA402_Code/src/igh_rt_operation.c"
+},
+{
+  "directory": "/home/nvidia/ct_driver/IGH_CiA402_Code/build/tests/test_c",
+  "command": "/usr/bin/aarch64-linux-gnu-gcc  -I/include -I/home/nvidia/ct_driver/IGH_CiA402_Code/include -g -O2 -g -Wall -std=gnu99 -o CMakeFiles/c_igh_test.dir/main.c.o -c /home/nvidia/ct_driver/IGH_CiA402_Code/tests/test_c/main.c",
+  "file": "/home/nvidia/ct_driver/IGH_CiA402_Code/tests/test_c/main.c"
+},
+{
+  "directory": "/home/nvidia/ct_driver/IGH_CiA402_Code/build/tests/test_cpp",
+  "command": "/usr/bin/aarch64-linux-gnu-g++  -I/include -I/home/nvidia/ct_driver/IGH_CiA402_Code/include -g -O2 -g -Wall -std=gnu++11 -o CMakeFiles/cpp_igh_test.dir/main.cpp.o -c /home/nvidia/ct_driver/IGH_CiA402_Code/tests/test_cpp/main.cpp",
+  "file": "/home/nvidia/ct_driver/IGH_CiA402_Code/tests/test_cpp/main.cpp"
+}
+]

@@ -8,7 +8,8 @@ add_executable(${TEST_NAME} main.cpp)
 
 # 2. 链接用到的库: ethercat库, igh_coe_motor库
 target_link_libraries(${TEST_NAME}
-    igh_coe_motor
+    igh_lib
+    pthread
     ethercat        # libethercat.so
 )
 

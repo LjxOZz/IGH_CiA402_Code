@@ -1,0 +1,1 @@
+/usr/bin/aarch64-linux-gnu-g++ -g CMakeFiles/cpp_igh_test.dir/main.cpp.o -o cpp_igh_test  ../../libigh_lib.a -lpthread -lethercat 

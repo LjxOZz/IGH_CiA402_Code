@@ -1,0 +1,113 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"build" : "tests/test_c",
+					"jsonFile" : "directory-tests.test_c-Debug-0311009c7a1c34280060.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "tests/test_c",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "tests/test_cpp",
+					"jsonFile" : "directory-tests.test_cpp-Debug-a434d5acdf926360dabd.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "tests/test_cpp",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"name" : "rt_posix_demo",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "c_igh_test::@3941e54c1599669bc03f",
+					"jsonFile" : "target-c_igh_test-Debug-a38a8eaed65adf721e4f.json",
+					"name" : "c_igh_test",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "cpp_igh_test::@2cc65c3c95d142293e1c",
+					"jsonFile" : "target-cpp_igh_test-Debug-6ed247d4cd2806596a9d.json",
+					"name" : "cpp_igh_test",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "igh_lib::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-igh_lib-Debug-f674d10280797e28d636.json",
+					"name" : "igh_lib",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/nvidia/ct_driver/IGH_CiA402_Code/build",
+		"source" : "/home/nvidia/ct_driver/IGH_CiA402_Code"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

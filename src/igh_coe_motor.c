@@ -328,7 +328,7 @@ int ecrt_init(void) {
     }
 
     printf("\n<===============================================>\n");
-    printf("Master x Finish Activate!\n");
+    printf("Master x Finish Activate!");
     printf("\n<===============================================>\n");
     
     return 0;

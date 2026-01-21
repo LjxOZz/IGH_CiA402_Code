@@ -7,8 +7,7 @@ CPP封装层
 
 int main() 
 {
-    Torso test;
-    test.write(0x00);
+    TcTorsoDevice test;
 
     return 0;
 }

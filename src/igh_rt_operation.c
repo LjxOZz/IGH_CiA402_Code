@@ -1,93 +1,51 @@
-#define _GNU_SOURCE
 
 #include <sched.h>
+#include <pthread.h> 
 #include <sys/mman.h>
-#include <pthread.h>
 #include <sys/prctl.h>
-
-
+#include <stdbool.h>
 #include <unistd.h>
-#include <errno.h>
-#include <time.h>
-#include <stdint.h>
 
-#include "main.h"
+#include "igh_rt_operation.h"
+#include "igh_coe_motor.h"
 
-/*
-EnterCAT 启动命令
-sudo modprobe ec_master
-sudo /etc/init.d/ethercat start
-sudo modprobe ec_generic
-*/
+#define dc_user     // 开启dc时钟
 
-
-#define dc_user
-
-
-
-/****************************************************************************/
-//时间
-#define FREQUENCY 1000
 #define NSEC_PER_SEC (1000000000L)
 #define DIFF_NS(A, B) (((B).tv_sec - (A).tv_sec) * NSEC_PER_SEC + \
-                       (B).tv_nsec - (A).tv_nsec)
-#define TIMESPEC2NS(T) ((uint64_t)(T).tv_sec * NSEC_PER_SEC + (T).tv_nsec)
-/*****************************************************************************/
+                       (B).tv_nsec - (A).tv_nsec)   // 计算时间差(ns)
+#define RT_THREAD_CPU_CORE      1                   // 绑定的CPU核心（固定值，便于修改）
+#define MAX_CONTINUOUS_TIMEOUT  2                   // 最大连续超时次数
 
 
+/* ===================== rt_thread 全局变量(实时任务统计/控制) ===================== */
+// 多线程访问，需加锁
+volatile uint64_t period_ns = 0;                // 单次周期耗时(ns)
+volatile uint64_t period_min_ns = UINT64_MAX;   // 周期耗时最小值(ns)
+volatile uint64_t period_max_ns = 0;            // 周期耗时最大值(ns)
 
-/* **************************************************** 全局变量 **************************************************** */
-#pragma pack(push, 1)   // 开启 1 字节对齐
+volatile uint64_t exec_ns = 0;                  // 任务执行耗时(ns)
+volatile uint64_t exec_min_ns = UINT64_MAX;     // 执行耗时最小值(ns)
+volatile uint64_t exec_max_ns = 0;              // 执行耗时最大值(ns)
 
-
-
-
-#pragma pack(pop)   
-
-/*****************************************************************************/
-//线程, 实时
-struct timespec period, cusTomPeriod;
-
-short threadQuitFlag = 0;
-
-uint32_t period_ns = 0;     //
-uint32_t exec_ns = 0;       //rt task 的执行时间
-
-uint32_t period_min_ns  = 1000000000, period_max_ns = 0;
-uint32_t exec_min_ns    = 1000000000, exec_max_ns   = 0;
-
+volatile uint64_t timeOutCount = 0;             // 超时总次数
+volatile uint32_t contTimeCount = 0;            // 连续超时计数
+volatile uint32_t threadConTimeOut = 0;         // 连续超时阈值触发计数
+volatile bool threadQuitFlag = false;           // 线程退出标志
 static short sPeriodCount = 0;
+
 static int sPrintCount = 0;
-
-
-
-struct timespec startTime, endTime, lastStartTime;
-struct timespec taskStartTime, taskEndTime;
-struct timespec nextTime;
-
-static int timeOutCount = 0;
-static int contTimeCount = 0;
-static int threadConTimeOut = 0;
-/*****************************************************************************/
-// 线程/任务函数
-void *rt_thread(void *arg);
-void *custom_thread(void *arg);
-
-void cyclic_task();
-void custom_task();
-
-/*****************************************************************************/
-
-
-/*****************************************************************************/
-
-
-
+/* ===================== CiA402_Init 全局变量(实时任务统计/控制) ===================== */
 static unsigned int counter_01s = 0;
 static unsigned int counter_10s = 0;
 struct timespec dctime;
 uint64_t apptime = 0;
 unsigned int sync_ref_counter = 0;
+
+
+extern S_EthercatMaster masters[D_MASTER_AMOUNT];
+extern S_SlaveConfig slave_configs[];
+
 /*
  Pp 模式 测试任务
 */
@@ -201,163 +159,157 @@ void CiA402_Init(void) {
     ecrt_master_send(masters[0].pmaster);
 }
 
-
-// 打印任务
-void custom_task()
+void *rt_thread(void *arg)
 {
-    if (sPrintCount >= 20000)
-    {
+    prctl(PR_SET_NAME, "rt thread");                        // 设置线程名字
+    /* 将当前线程限制为仅在指定处理器上运行 */
+    cpu_set_t cpuSet;
+    CPU_ZERO(&cpuSet);
+    CPU_SET(RT_THREAD_CPU_CORE, &cpuSet);
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet) != 0) {
+        perror("failed to pthread_setaffinity_np\n");
+    }
+
+    struct timespec *setPeriod = (struct timespec *)arg;    // 获取周期参数
+    printf("\n====rt-thread====\n");
+
+    // ===================== 2. 局部变量初始化（减少全局变量访问） =====================
+    struct timespec local_last_start = {0, 0};
+    struct timespec local_start;
+    struct timespec local_task_start;
+    struct timespec local_task_end;
+    struct timespec local_next;
+    uint64_t local_period_ns;
+    uint64_t local_exec_ns;
+    uint64_t local_process_time;
+    bool local_quit_flag = false;
+    uint32_t local_cont_timeout = 0;
+
+    while (!local_quit_flag) {
+        sPrintCount ++;
+        
+        clock_gettime(CLOCK_MONOTONIC, &local_start);
+        
+        if (sPeriodCount == 0) {
+            local_last_start = local_start;
+            sPeriodCount = 1;
+        } else {
+            local_period_ns = DIFF_NS(local_last_start, local_start);
+            period_ns = local_period_ns;
+            // 更新周期最值
+            if (local_period_ns < period_min_ns) period_min_ns = local_period_ns;
+            if (local_period_ns > period_max_ns) period_max_ns = local_period_ns;
+        }
+
+        // -------------------- 核心任务执行 --------------------
+        clock_gettime(CLOCK_MONOTONIC, &local_task_start);
+        CiA402_Init();
+        // cyclic_task();
+        clock_gettime(CLOCK_MONOTONIC, &local_task_end);
+
+        // 计算任务执行耗时
+        local_exec_ns = DIFF_NS(local_task_start, local_task_end);
+        exec_ns = local_exec_ns; // 更新全局统计
+        // 更新执行耗时最值
+        if (local_exec_ns < exec_min_ns) exec_min_ns = local_exec_ns;
+        if (local_exec_ns > exec_max_ns) exec_max_ns = local_exec_ns;
+        // -------------------- 超时检查 & 精确睡眠 --------------------
+        // 计算本次循环总耗时（从开始到任务结束）
+        local_process_time = DIFF_NS(local_start, local_task_end);
+        
+        if (local_process_time >= setPeriod->tv_nsec) {
+            // 超时处理：记录统计，触发退出逻辑
+            timeOutCount++;
+            local_cont_timeout++;
+            contTimeCount = local_cont_timeout; // 更新全局
+            
+            // 连续超时超过阈值，标记退出
+            if (local_cont_timeout >= MAX_CONTINUOUS_TIMEOUT) {
+                threadConTimeOut++;
+                local_quit_flag = true; // 局部标记，减少全局变量竞争
+                threadQuitFlag = true;
+            }
+        } else {
+            // 未超时：重置连续超时计数，计算精确睡眠时间
+            local_cont_timeout = 0;
+            contTimeCount = 0;
+
+            // 计算下一次唤醒时间（绝对时间，避免相对睡眠的误差累积）
+            local_next = local_start;
+            local_next.tv_nsec += setPeriod->tv_nsec;
+            // 处理纳秒溢出（必做：避免tv_nsec >= 1e9导致错误）
+            if (local_next.tv_nsec >= 1000000000) {
+                local_next.tv_sec += local_next.tv_nsec / 1000000000;
+                local_next.tv_nsec %= 1000000000;
+            }
+
+            // 精确睡眠（TIMER_ABSTIME：基于绝对时间，精度更高）
+            clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &local_next, NULL);
+        }
+
+        // printf("period  %ld us\n", local_period_ns);
+        // printf("exec    %ld us\n", local_exec_ns);
+        // printf("process %ld us\n", local_process_time);
+
+        // 更新上一次开始时间
+        local_last_start = local_start;
+    }
+    return 0;
+}
+
+
+void custom_task(void) {
+    if (sPrintCount >= 20000) {
         if (is_all_slave_op()) {
             // printf ns time
             printf("period     %d ... %d us\n",
                    (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
             printf("exec       %d ... %d us\n",
                    (int)(exec_min_ns / 1000.0), (int)(exec_max_ns / 1000.0));
-
-
-            printf("master0 slave0==%d, statuscode = %d\n", 0, masters[0].slave_values[0].StatusWord);
-
+            printf("timeOutCount = %ld, continusTimeOut = %d, threadTimeOut = %d\n", 
+                    timeOutCount, contTimeCount, threadConTimeOut);
+            
             printf("\n");
 
-            printf("timeOutCount===%d, continusTimeOut===%d, threadTimeOut==%d\n", 
-                    timeOutCount, contTimeCount, threadConTimeOut);
+            printf("master0 slave0 = %d, statuscode = %d\n", 0, masters[0].slave_values[0].StatusWord);
 
             printf("\n");
         }
 
         check_master_slave_state();
-
         sPrintCount = 0;
     }
 }
 
 void *custom_thread(void *arg)
 {
-    printf("====custom-thread====\n");
+    printf("\n====custom-thread====\n");
     struct timespec *setPeriod = (struct timespec *)arg;
 
     uint32_t sleep_us = setPeriod->tv_sec * 1000000 + setPeriod->tv_nsec / 1000;
 
-    while (1)
-    {
+    while (1) {
         custom_task();
         usleep(sleep_us);
     }
 }
 
-/*
 
-循环开始 → 时间测量 → 执行cyclic_task() → 统计性能 → 
-├─ 如果超时：记录错误
-└─ 如果正常：精确睡眠到下个周期 → 循环结束
-*/
-void *rt_thread(void *arg)
-{
-
-    /* 将当前线程限制为仅在指定处理器上运行 */
-    cpu_set_t cpuSet;
-    CPU_ZERO(&cpuSet);
-    CPU_SET(1, &cpuSet);
-    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuSet) != 0) {
-        printf("failed to pthread_setaffinity_np\n");
-        return NULL;
+int rt_init(void) {
+    /* 锁定内存 */
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+        printf("Warning: Failed to lock memory\n");
+        return -2;
     }
-    
-    prctl(PR_SET_NAME, "rt thread");                        // 设置线程名字
-    struct timespec *setPeriod = (struct timespec *)arg;    // 获取周期参数
-
-    printf("====rt-thread====\n");
-
-    while (1)
-    {
-        sPrintCount++;
-
-        clock_gettime(CLOCK_MONOTONIC, &startTime);
-        if (sPeriodCount == 0) {
-            lastStartTime = startTime;
-        } else {
-            period_ns = DIFF_NS(lastStartTime, startTime);  // 计算与上次的时间差
-            lastStartTime = startTime;
-        }
-
-        clock_gettime(CLOCK_MONOTONIC, &taskStartTime);
-        // do something...
-        // cyclic_task();
-        CiA402_Init();
-
-        clock_gettime(CLOCK_MONOTONIC, &taskEndTime);
-        endTime = taskEndTime;
-
-        exec_ns = DIFF_NS(taskStartTime, taskEndTime);  //测量任务执行时间
-
-        //如果处理时间超过设定的周期(1ms)  记录超时错误
-        long int processTime = (endTime.tv_sec - startTime.tv_sec) * 1000000000 +
-                                (endTime.tv_nsec - startTime.tv_nsec);
-        if (processTime >= setPeriod->tv_nsec) {    
-            // printf("processTime====%ld,tv_nsec====%ld\n", processTime, setPeriod->tv_nsec);
-            contTimeCount++;
-            threadQuitFlag = 1;
-            timeOutCount++;
-            if (contTimeCount >= 2) {
-                threadConTimeOut++;
-            }
-        } else {    // 精确睡眠
-            contTimeCount = 0;
-            nextTime = startTime;
-            // nextTime.tv_nsec += (setPeriod->tv_nsec - processTime);
-            nextTime.tv_nsec += setPeriod->tv_nsec;
-            if (nextTime.tv_nsec >= 1000000000) {
-                nextTime.tv_sec++;
-                nextTime.tv_nsec -= 1000000000;
-            }
-            clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &nextTime, NULL);
-        }
-
-        if (sPeriodCount == 1){
-            if (period_ns < period_min_ns) {
-                period_min_ns = period_ns;
-            }
-            if (period_ns > period_max_ns) {
-                period_max_ns = period_ns;
-            }
-        }
-
-        if (exec_ns < exec_min_ns) {
-            exec_min_ns = exec_ns;
-        } else if (exec_ns > exec_max_ns) {
-            exec_max_ns = exec_ns;
-        }
-
-        // if (threadQuitFlag)
-        // {
-        //     printf("quit\n");
-        //     break;
-        // }
-
-        if (sPeriodCount == 0) {
-            sPeriodCount = 1;
-        }
-
-    }
-}
-
-#define TEST
-#ifdef TEST
-
-int main(int argc, char **argv){
-
-    ecrt_init();
-    
-    /* 线程相关 */
-    pthread_t rtThread;
-    pthread_t customThread;
-    pthread_attr_t attr;
-    pthread_attr_t customAttr;
-
-    struct sched_param param = {};
-    struct sched_param customPara = {};
 
     int ret = 0;
+    pthread_t rtThread;
+    pthread_attr_t attr;
+    struct sched_param param = {};
+    pthread_t customThread;
+    pthread_attr_t customAttr;
+    struct sched_param customPara = {};
+
     /* 初始化线程 */
     ret = pthread_attr_init(&attr);
     if (0 != ret) {
@@ -380,7 +332,6 @@ int main(int argc, char **argv){
         printf("pthread pthread_attr_setshedpolicy customAttr failed ret = %d\n", ret);
         return -1;
     }
-
     /* 设置优先级 */
     param.sched_priority = 95;  //高
     ret = pthread_attr_setschedparam(&attr, &param);
@@ -394,7 +345,6 @@ int main(int argc, char **argv){
         printf("pthread pthread_attr_setschedparam customPara failed ret = %d\n", ret);
         return -1;
     }
-
     /* 设置继承属性 */
     ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     if (0 != ret) {
@@ -406,8 +356,8 @@ int main(int argc, char **argv){
         printf("thread pthread_attr_setinheritsched customAttr ret = %d\n", ret);
         return -1;
     }
-
     /* 设置周期时间 创建线程 */
+    struct timespec period;
     period.tv_sec = 0;
     period.tv_nsec = D_SM_TIME; // D_SM_TIME = 1000 * 1000 = 1ms
     //rt_thread: 实时线程，运行EtherCAT循环任务
@@ -416,7 +366,7 @@ int main(int argc, char **argv){
         printf("pthread_create error ret = %d\n", ret);
         return -1;
     }
-
+    struct timespec cusTomPeriod;
     cusTomPeriod.tv_sec = 0;
     cusTomPeriod.tv_nsec = 5000 * 1000; // 5000us = 5ms
     //custom_thread: 普通线程，用于打印状态信息
@@ -426,21 +376,14 @@ int main(int argc, char **argv){
         return -1;
     }
 
-    //等待实时线程结束
+    printf("\n<===============================================>\n");
+    printf("rtThread create success! Waiting for rtThread to end");
+    printf("\n<===============================================>\n");
+    
     pthread_join(rtThread, NULL);
 
     munlockall();           // 解锁内存页
 
-    printf("thread over\n");
     return 0;
 }
 
-#else
-int main(int argc, char **argv) {
-
-
-    printf("thread over\n");
-    return 0;
-}
-
-#endif
