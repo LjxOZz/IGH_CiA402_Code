@@ -112,7 +112,6 @@ void CiA402_Init(void) {
 
             mode = 4;
         }else if (mode == 4) {
-            printf("Mode4\n");
             if (is_all_slave_op()) {
                 mode = 4;
                 actual_position_value   = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
@@ -122,17 +121,15 @@ void CiA402_Init(void) {
                 profile_velocity = read_sdo_u32(psdo_profile_velocity);
 
                 write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x3F);
-                printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
-                    target_position_value, actual_position_value, profile_velocity, actual_speed_value);
+                // printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
+                //     target_position_value, actual_position_value, profile_velocity, actual_speed_value);
 
                 // printf("-------------is_all_slave_op-------------\n");
             }
         }
 
-        printf("CiA402_test Mode        = %d\n", mode);
-        printf("CiA402_test StatusWord  = %Xh\n", masters[0].slave_values[0].StatusWord);
-        printf("CiA402_test ControlWord = %Xh\n", masters[0].slave_values[0].ControlWord);
-        printf("CiA402_test ErrorStatus = %Xh\n", masters[0].slave_values[0].ErrorStatus);
+        // printf("CiA402_test Mode        = %d\n", mode);
+
     }
     
     // write process data
@@ -189,7 +186,7 @@ void *rt_thread(void *arg)
         sPrintCount ++;
         
         clock_gettime(CLOCK_MONOTONIC, &local_start);
-        
+
         if (sPeriodCount == 0) {
             local_last_start = local_start;
             sPeriodCount = 1;
@@ -274,6 +271,9 @@ void custom_task(void) {
             printf("master0 slave0 = %d, statuscode = %d\n", 0, masters[0].slave_values[0].StatusWord);
 
             printf("\n");
+            printf("CiA402_test StatusWord  = %Xh\n", masters[0].slave_values[0].StatusWord);
+            printf("CiA402_test ControlWord = %Xh\n", masters[0].slave_values[0].ControlWord);
+            printf("CiA402_test ErrorStatus = %Xh\n", masters[0].slave_values[0].ErrorStatus);
         }
 
         check_master_slave_state();
