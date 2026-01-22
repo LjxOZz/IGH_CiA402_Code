@@ -1,1 +1,0 @@
-/usr/bin/aarch64-linux-gnu-g++ -g CMakeFiles/cpp_igh_test.dir/main.cpp.o -o cpp_igh_test  ../../libigh_lib.a -lethercat /usr/local/lib/libnmxrt.a /usr/local/lib/libzenohc.a -lrt -lpthread -lm -ldl /usr/local/lib/libprotobuf.a /usr/local/lib/libspdlog.a /usr/local/lib/libfmt.a 

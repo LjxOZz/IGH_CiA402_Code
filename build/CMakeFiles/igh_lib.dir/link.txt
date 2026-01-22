@@ -1,2 +1,0 @@
-/usr/bin/aarch64-linux-gnu-ar qc libigh_lib.a CMakeFiles/igh_lib.dir/src/igh_coe_motor.c.o CMakeFiles/igh_lib.dir/src/igh_rt_operation.c.o
-/usr/bin/aarch64-linux-gnu-ranlib libigh_lib.a
