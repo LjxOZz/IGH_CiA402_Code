@@ -3,10 +3,13 @@ cmake_minimum_required(VERSION 3.10)
 
 project(rt_posix_demo VERSION 1.0 LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_compile_options(-O2 -g -Wall)
 # [[    静态库:开始构建    ]]
 
@@ -18,11 +21,15 @@ set(CORE_SOURCES
     src/igh_rt_operation.c
 )
 
+# 查找nmxrt库 (make install后)
+
+
 # 构建核心静态库
 add_library(${LIB_NAME} STATIC ${CORE_SOURCES})
 
 # 添加编译定义( 解决 CPU_ZERO/CPU_SET 宏未定义)
 target_compile_definitions(${LIB_NAME} PRIVATE _GNU_SOURCE)
+
 
 # 头文件路径: 全局生效(指令之后的所有「目标」都继承这个路径)
 # include_directories(
@@ -35,8 +42,6 @@ target_include_directories(${LIB_NAME} PUBLIC
     /include                        # igh库头文件路径
     ${PROJECT_SOURCE_DIR}/include   # 本地路径
 )
-
-target_link_libraries(${LIB_NAME} PRIVATE pthread)
 
 # [[    静态库:结束构建    ]]
 

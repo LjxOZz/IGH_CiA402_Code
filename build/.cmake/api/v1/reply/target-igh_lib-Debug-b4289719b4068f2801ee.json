@@ -18,7 +18,8 @@
 		],
 		"files" : 
 		[
-			"CMakeLists.txt"
+			"CMakeLists.txt",
+			"tests/test_cpp/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -28,26 +29,35 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 22,
+				"line" : 28,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 10,
+				"line" : 13,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 25,
+				"line" : 31,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 34,
+				"line" : 41,
 				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 15,
+				"parent" : 5
 			}
 		]
 	},
@@ -57,7 +67,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "-g"
+					"fragment" : "-g -fPIC"
 				},
 				{
 					"backtrace" : 2,
@@ -90,7 +100,11 @@
 				},
 				{
 					"backtrace" : 4,
-					"path" : "/home/nvidia/ct_driver/IGH_CiA402_Code/include"
+					"path" : "/cpp/IGH_CiA402_Code/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/nmxrt/build"
 				}
 			],
 			"language" : "C",

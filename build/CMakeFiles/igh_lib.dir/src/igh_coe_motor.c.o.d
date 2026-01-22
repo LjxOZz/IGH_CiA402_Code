@@ -1,8 +1,6 @@
 CMakeFiles/igh_lib.dir/src/igh_coe_motor.c.o: \
- /home/nvidia/ct_driver/IGH_CiA402_Code/src/igh_coe_motor.c \
- /usr/include/stdc-predef.h \
- /home/nvidia/ct_driver/IGH_CiA402_Code/include/igh_coe_motor.h \
- /usr/include/stdio.h \
+ /cpp/IGH_CiA402_Code/src/igh_coe_motor.c /usr/include/stdc-predef.h \
+ /cpp/IGH_CiA402_Code/include/igh_coe_motor.h /usr/include/stdio.h \
  /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
  /usr/include/features.h /usr/include/features-time64.h \
  /usr/include/aarch64-linux-gnu/bits/wordsize.h \

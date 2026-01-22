@@ -1,9 +1,10 @@
 /* 
 CPP封装层
-
 */
 #include <string>
+
 #include "main.hpp"
+#include "nmxrt/publisher.hpp"
 
 int TcTorsoDevice::teach(TorsoCmd dir, float step, float vel) {
 

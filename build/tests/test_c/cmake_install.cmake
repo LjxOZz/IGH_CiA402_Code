@@ -1,4 +1,4 @@
-# Install script for directory: /home/nvidia/ct_driver/IGH_CiA402_Code/tests/test_c
+# Install script for directory: /cpp/IGH_CiA402_Code/tests/test_c
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
