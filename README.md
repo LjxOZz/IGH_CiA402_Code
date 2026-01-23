@@ -2,7 +2,7 @@
 
 这是一个demo
 
-## 目前实现效果
+## 目前
 
 1. 使用EnterCAT控制电机 Pp模式运动
 2. 目前只控制了一个电机, 但留了多主站,多从站的接口(没有写对应的处理API)
@@ -11,45 +11,44 @@
 
 ## 计划修改
 
-- [x] 1\. 重新封装IGH库相关API(单电机的PDO, SDO)  ---1.16
-- [x] 2\. 编写 CMake 和 Cpp 封装IGH库框架         ---1.19
+- [x] 1\. 重新封装IGH库相关API(单电机的PDO, SDO) ---1.16
+- [x] 2\. 编写 CMake 和 Cpp 封装IGH库框架 ---1.19
 - [ ] 3\. 相关API添加多电机操作(**`masters`**)
-  - [ ] 3.1 改进检查状态API
-  - [ ] 3.2 判断使用什么CIA402的控制模式
-  - [ ] 3.3 添加Cpp层的PDO SDO发送接受方法
+  - [x] 3.1 改进检查状态API ---1.23
+  - [x] 3.2 判断使用什么CIA402的控制模式 ---1.23(用CSP模式)
+  - [x] 3.3 添加获取电机状态接口
+  - [ ] 3.4 添加CSP模式控制接口
 - [ ] 4\. 重写同步时钟(**DC**)相关函数
 - [ ] 5\. 接入`nmxrt`库
   - [ ] 5.1 重写`CMakeList.txt`框架
   - [ ] 5.2 实现`publisher`电机状态 (速度,位置,力矩,等等)
+- [ ] 6\. c库实现多从机
+ 
+# 框架
 
+## C 库提供:
 
-# API
+1. 电机控制接口: 
+   1. `ecrt_init`
+   2. `read_pdo`, `write_pdo`
+   3. `read_sdo`, `write_sdo`
+2. 电机模式实时运行时的接口函数: 
+   1. `motor_csp_run_cycle`
+   2. `motor_pp_run_cycle`
+3. 等等
 
-## Cpp封装层
+## Cpp 封装层
+
+C++ 层管理线程
 
 实现 **TcTorsoDevice** 类
 
-## 电机控制API
-**igh_coe_motor.h**
+实现  类
 
-### 1. 初始化
-- `int ecrt_init(void)`: 实现初始化(主站0,从站0)设备
-  - PDO配置
-  - SDO配置
-  - 同步时钟配置
+## tests代码
 
-### 2. PDO/SDO
-**`XX`**: u8, u16, u32, s8, s16, s32
-- `read_pdo_uXX`: pdo读
-- `write_pdo_uXX`: pdo写
-- `read_sdo_uXX`: sdo读
-- `write_sdo_uXX`: sdo写
-
-## 线程API
-**igh_rt_operation.h**
-
-### 1. 初始化
-- `int rt_init(void)`
+- [x] 1\. c库接口测试
+- [ ] 2\. cpp实时线程测试
 
 
 # 环境搭建
@@ -61,6 +60,8 @@ sudo dpkg -i tztek-jetson-service-ethercat-v2.0.deb
 sudo modprobe ec_master
 sudo /etc/init.d/ethercat start
 sudo modprobe ec_generic
+
+
 ```
 
 ## 2.安装nmxrt库

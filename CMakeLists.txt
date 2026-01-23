@@ -1,16 +1,22 @@
 # [[    目标 = 库 或 可执行文件     ]]
 cmake_minimum_required(VERSION 3.10)
 
-project(rt_posix_demo VERSION 1.0 LANGUAGES C CXX)
-
+project(ct_igh_sdk VERSION 0.1 LANGUAGES C CXX)
+# cpp
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
+# c
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_compile_options(-O2 -g -Wall)
+find_package(zenohc REQUIRED)
+find_package(Protobuf REQUIRED)
+find_package(spdlog REQUIRED)
+
+find_package(nmxrt REQUIRED)
+
+# add_compile_options(-O2 -g -Wall)
 # [[    静态库:开始构建    ]]
 
 set(LIB_NAME igh_lib)

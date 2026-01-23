@@ -15,23 +15,14 @@ extern S_EthercatMaster masters[D_MASTER_AMOUNT];
 extern S_SlaveConfig slave_configs[];
 
 
-class TorsoCmd {
-public:
-    std::string name;   // 关节名称
-    double pos;         // 关节目标位置, 单位：rad or m
-    double vel;         // 关节目标速度, 单位：rad/s or m/s
-    double acc;         // 关节目标加速度, 单位：rad/s^2 or m/s^2
-    double effort;      // 关节目标力矩, 单位：Nm
-};
-
-class TorsoState {
-public:
-    std::string name;   // 关节名称
-    double pos;         // 关节反馈位置, 单位：rad or m
-    double vel;         // 关节反馈速度, 单位：rad/s or m/s
-    double acc;         // 关节反馈加速度, 单位：rad/s^2 or m/s^2
-    double effort;      // 关节反馈力矩, 单位：Nm
-};
+// class TorsoState {
+// public:
+//     std::string name;   // 关节名称
+//     double pos;         // 关节反馈位置, 单位：rad or m
+//     double vel;         // 关节反馈速度, 单位：rad/s or m/s
+//     double acc;         // 关节反馈加速度, 单位：rad/s^2 or m/s^2
+//     double effort;      // 关节反馈力矩, 单位：Nm
+// };
 
 class TcTorsoDevice {
 private:
@@ -41,14 +32,21 @@ public:
     TcTorsoDevice() {
 
         ecrt_init();
-        rt_init();
+
+        //this->run();
 
     }
     
     ~TcTorsoDevice() {
         
     }
-    
+
+    void run(void) {
+        // create_custom_thread();
+
+        create_motor_thread();
+    };
+
     /**
      * @brief 位置步进
      * @param dir 示教方向
@@ -57,7 +55,7 @@ public:
      * 
      * @return 
      */
-    int teach(TorsoCmd dir, float step, float vel);
+    int teach(int dir, float step, float vel);
 
     /**
      * @brief 关节空间运动
@@ -75,7 +73,14 @@ public:
      *
      * @return joint status
      */
-    TorsoState get_joint_state(void);
+    void get_joint_state(void) {
+        if (check_master_slave_state()) {
+            get_status_flags = true;
+            std::cout << "Spe:" << motor0_Speed << std::endl;
+            std::cout << "Pos:" << motor0_Position << std::endl;
+            std::cout << "Toq:" << motor0_Torque << std::endl;
+        }
+    };
 
 };
 

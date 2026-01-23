@@ -1,10 +1,6 @@
 
 set(TEST_NAME cpp_igh_test)
 
-find_package(zenohc REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(nmxrt REQUIRED)
 
 add_executable(${TEST_NAME} main.cpp)
 

@@ -155,7 +155,7 @@ void CiA402_Init(void) {
             mode = 4;
         }else if (mode == 4) {
             printf("Mode4\n");
-            if (is_all_slave_op()) {
+            if (check_master_slave_state() == 1) {
                 mode = 4;
                 actual_position_value   = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
                 actual_speed_value      = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
@@ -167,7 +167,6 @@ void CiA402_Init(void) {
                 printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
                     target_position_value, actual_position_value, profile_velocity, actual_speed_value);
 
-                // printf("-------------is_all_slave_op-------------\n");
             }
         }
 
@@ -207,7 +206,7 @@ void custom_task()
 {
     if (sPrintCount >= 20000)
     {
-        if (is_all_slave_op()) {
+        if (check_master_slave_state()) {
             // printf ns time
             printf("period     %d ... %d us\n",
                    (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
@@ -225,7 +224,6 @@ void custom_task()
             printf("\n");
         }
 
-        check_master_slave_state();
 
         sPrintCount = 0;
     }

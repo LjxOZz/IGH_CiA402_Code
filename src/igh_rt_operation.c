@@ -34,7 +34,18 @@ volatile uint32_t threadConTimeOut = 0;         // 连续超时阈值触发计�
 volatile bool threadQuitFlag = false;           // 线程退出标志
 static short sPeriodCount = 0;
 
-static int sPrintCount = 0;
+int sPrintCount = 0;
+
+
+motor_state_t motor0_state = MOTOR_STATE_INIT;
+
+/* CPP 接口 */
+pthread_t rtThread;
+bool get_status_flags = false;
+int32_t motor0_Speed;
+int32_t motor0_Position;
+int16_t motor0_Torque;
+
 /* ===================== CiA402_Init 全局变量(实时任务统计/控制) ===================== */
 static unsigned int counter_01s = 0;
 static unsigned int counter_10s = 0;
@@ -46,10 +57,18 @@ unsigned int sync_ref_counter = 0;
 extern S_EthercatMaster masters[D_MASTER_AMOUNT];
 extern S_SlaveConfig slave_configs[];
 
-/*
- Pp 模式 测试任务
-*/
-void CiA402_Init(void) {
+/**
+ * @brief   电机csp模式的实时运行任务 周期:1ms
+ * @return  void
+ */
+void motor_csp_run_cycle(void) {
+
+}
+/**
+ * @brief   电机pp模式的实时运行任务 周期:1ms
+ * @return  void
+ */
+void motor_pp_run_cycle(void) {
     // struct timespec    wakeup_time, time;
     static uint8_t  mode = 0;
     
@@ -75,60 +94,69 @@ void CiA402_Init(void) {
     else {
         counter_01s = 1000;
 
-        if (mode == 0) {
-            // 1.复位
-            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x80);
-
-            mode = 1;
-        }else if (mode == 1) {
-            // 2.使能电压, 快速停止, 设置Pp模式 
-            write_pdo_u8(masters[0].slave_offsets[0].OperationMode, (uint8_t)PpMode);
-            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x06);
-
-            status_word = masters[0].slave_values[0].StatusWord;
-            if (status_word & 0x21) {
-                printf("cyclic_task: mode1 statcode==%d\n", status_word);
-                mode = 2;
-            }
-        }else if (mode == 2) {
-            // 3.使能操作
-            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x07);
-
-            mode = 3;
-        }else if (mode == 3) {
-            // 4.
-            actual_position_value = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
-            actual_speed_value = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
-            printf("cyclic_task: mode3 pos==%d, spe==%d\n", actual_position_value, actual_speed_value);
-
-            write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x2F);
-
-            if (write_pdo_u32(masters[0].slave_offsets[0].TargetPosition, 0)) { // ??
-                fprintf(stderr, "Failed TargetPosition write_sdo_u32");
-            }
-            if (write_sdo_u32(psdo_profile_velocity, 100000)) {                 // ??
-                fprintf(stderr, "Failed profile_velocity write_sdo_u32");
-            }
-
-            mode = 4;
-        }else if (mode == 4) {
-            if (is_all_slave_op()) {
+        if (motor0_state == MOTOR_STATE_INIT) {
+            switch (mode)
+            {
+            // 0.复位
+            case 0:
+                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x80);
+                mode = 1;
+                break;
+            // 1.使能电压, 快速停止, 设置Pp模式 
+            case 1:
+                write_pdo_u8(masters[0].slave_offsets[0].OperationMode, (uint8_t)PpMode);
+                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x06);
+                status_word = masters[0].slave_values[0].StatusWord;
+                if (status_word & 0x21) {
+                    printf("cyclic_task: mode1 statcode = %d\n", status_word);
+                    mode = 2;
+                }
+                break;
+            // 2.使能操作
+            case 2:
+                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x07);
+                mode = 3;
+                break;
+            // 3.设置0x2F 目标位置,速度
+            case 3:
+                printf("cyclic_task: mode3 pos==%d, spe==%d\n", actual_position_value, actual_speed_value);
+                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x2F);
+                if (write_pdo_u32(masters[0].slave_offsets[0].TargetPosition, 0)) { // ??
+                    fprintf(stderr, "Failed TargetPosition write_sdo_u32");
+                }
+                if (write_sdo_u32(psdo_profile_velocity, 100000)) {                 // ??
+                    fprintf(stderr, "Failed profile_velocity write_sdo_u32");
+                }
                 mode = 4;
-                actual_position_value   = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
-                actual_speed_value      = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
-                target_position_value   = read_pdo_s32(masters[0].slave_offsets[0].TargetPosition);
+                break;
+            // 3.设置控制字:0x3F, profile_velocity
+            case 4:
+                if (check_master_slave_state() == 1) {
+                    
+                    actual_position_value   = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
+                    actual_speed_value      = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
+                    target_position_value   = read_pdo_s32(masters[0].slave_offsets[0].TargetPosition);
+                    profile_velocity = read_sdo_u32(psdo_profile_velocity);
 
-                profile_velocity = read_sdo_u32(psdo_profile_velocity);
-
-                write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x3F);
-                // printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
-                //     target_position_value, actual_position_value, profile_velocity, actual_speed_value);
-
-                // printf("-------------is_all_slave_op-------------\n");
+                    write_pdo_u16(masters[0].slave_offsets[0].ControlWord, 0x3F);
+                    printf("cyclic_task: mode4 tar_pos=%d now_pos=%d, tar_spe=%d now_spe==%d\n", 
+                        target_position_value, actual_position_value, profile_velocity, actual_speed_value);
+                    mode = 5;
+                }
+                break;
+            default:
+                printf("Motor initialized successfully.\n");
+                motor0_state = MOTOR_STATE_READY;
+                break;
+            }
+            
+        }else if(motor0_state == MOTOR_STATE_READY) {
+            if (get_status_flags) {
+                get_motor_state(&motor0_Speed, &motor0_Position, &motor0_Torque);
+                get_status_flags = false;
             }
         }
 
-        // printf("CiA402_test Mode        = %d\n", mode);
 
     }
     
@@ -200,7 +228,7 @@ void *rt_thread(void *arg)
 
         // -------------------- 核心任务执行 --------------------
         clock_gettime(CLOCK_MONOTONIC, &local_task_start);
-        CiA402_Init();
+        motor_pp_run_cycle();
         // cyclic_task();
         clock_gettime(CLOCK_MONOTONIC, &local_task_end);
 
@@ -211,7 +239,7 @@ void *rt_thread(void *arg)
         if (local_exec_ns < exec_min_ns) exec_min_ns = local_exec_ns;
         if (local_exec_ns > exec_max_ns) exec_max_ns = local_exec_ns;
         // -------------------- 超时检查 & 精确睡眠 --------------------
-        // 计算本次循环总耗时（从开始到任务结束）
+        // 计算本次循环总耗时(从开始到任务结束)
         local_process_time = DIFF_NS(local_start, local_task_end);
         
         if (local_process_time >= setPeriod->tv_nsec) {
@@ -244,10 +272,6 @@ void *rt_thread(void *arg)
             clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &local_next, NULL);
         }
 
-        // printf("period  %ld us\n", local_period_ns);
-        // printf("exec    %ld us\n", local_exec_ns);
-        // printf("process %ld us\n", local_process_time);
-
         // 更新上一次开始时间
         local_last_start = local_start;
     }
@@ -255,47 +279,35 @@ void *rt_thread(void *arg)
 }
 
 
-void custom_task(void) {
-    if (sPrintCount >= 20000) {
-        if (is_all_slave_op()) {
-            // printf ns time
-            printf("period     %d ... %d us\n",
-                   (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
-            printf("exec       %d ... %d us\n",
-                   (int)(exec_min_ns / 1000.0), (int)(exec_max_ns / 1000.0));
-            printf("timeOutCount = %ld, continusTimeOut = %d, threadTimeOut = %d\n", 
-                    timeOutCount, contTimeCount, threadConTimeOut);
+// void custom_task(void) {
+//     if (sPrintCount >= 20000) {
+
+//         if (check_master_slave_state()) {
+//             // printf ns time
+//             printf("period     %d ... %d us\n",
+//                    (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
+//             printf("exec       %d ... %d us\n",
+//                    (int)(exec_min_ns / 1000.0), (int)(exec_max_ns / 1000.0));
+//             printf("timeOutCount = %ld, continusTimeOut = %d, threadTimeOut = %d\n", 
+//                     timeOutCount, contTimeCount, threadConTimeOut);
             
-            printf("\n");
+//             printf("\n");
 
-            printf("master0 slave0 = %d, statuscode = %d\n", 0, masters[0].slave_values[0].StatusWord);
+//             printf("master0 slave0 = %d, statuscode = %d\n", 0, masters[0].slave_values[0].StatusWord);
 
-            printf("\n");
-            printf("CiA402_test StatusWord  = %Xh\n", masters[0].slave_values[0].StatusWord);
-            printf("CiA402_test ControlWord = %Xh\n", masters[0].slave_values[0].ControlWord);
-            printf("CiA402_test ErrorStatus = %Xh\n", masters[0].slave_values[0].ErrorStatus);
-        }
-
-        check_master_slave_state();
-        sPrintCount = 0;
-    }
-}
-
-void *custom_thread(void *arg)
-{
-    printf("\n====custom-thread====\n");
-    struct timespec *setPeriod = (struct timespec *)arg;
-
-    uint32_t sleep_us = setPeriod->tv_sec * 1000000 + setPeriod->tv_nsec / 1000;
-
-    while (1) {
-        custom_task();
-        usleep(sleep_us);
-    }
-}
+//             printf("\n");
+//             printf("CiA402_test StatusWord  = %Xh\n", masters[0].slave_values[0].StatusWord);
+//             printf("CiA402_test ControlWord = %Xh\n", masters[0].slave_values[0].ControlWord);
+//             printf("CiA402_test ErrorStatus = %Xh\n", masters[0].slave_values[0].ErrorStatus);
+//         }
+//         sPrintCount = 0;
+//     }
+// }
 
 
-int rt_init(void) {
+
+
+int create_motor_thread(void) {
     /* 锁定内存 */
     if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
         printf("Warning: Failed to lock memory\n");
@@ -303,12 +315,9 @@ int rt_init(void) {
     }
 
     int ret = 0;
-    pthread_t rtThread;
+
     pthread_attr_t attr;
     struct sched_param param = {};
-    pthread_t customThread;
-    pthread_attr_t customAttr;
-    struct sched_param customPara = {};
 
     /* 初始化线程 */
     ret = pthread_attr_init(&attr);
@@ -316,22 +325,14 @@ int rt_init(void) {
         printf("pthread_attr_init error ret = %d\n", ret);
         return -1;
     }
-    ret = pthread_attr_init(&customAttr);
-    if (0 != ret) {
-        printf("pthread_attr_init customAttr error ret = %d\n", ret);
-        return -1;
-    }
+
     /* 设置调度策略 */
     ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     if (0 != ret) {
         printf("pthread pthread_attr_setshedpolicy failed ret = %d\n", ret);
         return -1;
     }
-    ret = pthread_attr_setschedpolicy(&customAttr, SCHED_OTHER);
-    if (0 != ret) {
-        printf("pthread pthread_attr_setshedpolicy customAttr failed ret = %d\n", ret);
-        return -1;
-    }
+
     /* 设置优先级 */
     param.sched_priority = 95;  //高
     ret = pthread_attr_setschedparam(&attr, &param);
@@ -339,23 +340,14 @@ int rt_init(void) {
         printf("pthread pthread_attr_setschedparam failed ret = %d\n", ret);
         return -1;
     }
-    customPara.sched_priority = 0;
-    ret = pthread_attr_setschedparam(&customAttr, &customPara);
-    if (0 != ret) {
-        printf("pthread pthread_attr_setschedparam customPara failed ret = %d\n", ret);
-        return -1;
-    }
+
     /* 设置继承属性 */
     ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     if (0 != ret) {
         printf("thread pthread_attr_setinheritsched ret = %d\n", ret);
         return -1;
     }
-    ret = pthread_attr_setinheritsched(&customAttr, PTHREAD_EXPLICIT_SCHED);
-    if (0 != ret) {
-        printf("thread pthread_attr_setinheritsched customAttr ret = %d\n", ret);
-        return -1;
-    }
+
     /* 设置周期时间 创建线程 */
     struct timespec period;
     period.tv_sec = 0;
@@ -366,24 +358,13 @@ int rt_init(void) {
         printf("pthread_create error ret = %d\n", ret);
         return -1;
     }
-    struct timespec cusTomPeriod;
-    cusTomPeriod.tv_sec = 0;
-    cusTomPeriod.tv_nsec = 5000 * 1000; // 5000us = 5ms
-    //custom_thread: 普通线程，用于打印状态信息
-    ret = pthread_create(&customThread, &customAttr, &custom_thread, (void *)&cusTomPeriod);
-    if (0 != ret) {
-        printf("pthread_create custom_thread error ret = %d\n", ret);
-        return -1;
-    }
 
     printf("\n<===============================================>\n");
     printf("rtThread create success! Waiting for rtThread to end");
     printf("\n<===============================================>\n");
-    
-    pthread_join(rtThread, NULL);
 
+    pthread_join(rtThread, NULL);
     munlockall();           // 解锁内存页
 
     return 0;
 }
-

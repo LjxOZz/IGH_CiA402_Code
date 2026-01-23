@@ -109,12 +109,15 @@ void init_slave_values(void) {
 /**
  * @brief   获取主站状态, 并且保存到 全局的smaster_state变量中
  * @param pmaster 主站
- * @return  void
+ * @return  0 on success, otherwise negative error code.
  */
-void check_master_state(ec_master_t *pmaster) {
+int check_master_state(ec_master_t *pmaster) {
+    int ret = 0;
     ec_master_state_t ms;
-    ecrt_master_state(pmaster, &ms);
+    ret = ecrt_master_state(pmaster, &ms);
+    if (ret) return ret;
 
+    
     if (ms.slaves_responding != smaster_state.slaves_responding) {
         printf("%u slave(s).\n", ms.slaves_responding);
     }
@@ -125,15 +128,18 @@ void check_master_state(ec_master_t *pmaster) {
         printf("Link is %s.\n", ms.link_up ? "up" : "down");
     }
     smaster_state = ms;
+    return ret;
 }
 /**
  * @brief   获取通信域状态, 并且保存到 全局的sdomain_state变量中
  * @param pdomain 通信域
- * @return  void
+ * @return  0 on success, otherwise negative error code.
  */
-void check_domain_state(ec_domain_t *pdomain) {
+int check_domain_state(ec_domain_t *pdomain) {
+    int ret = 0;
     ec_domain_state_t ds;
-    ecrt_domain_state(pdomain, &ds);
+    ret = ecrt_domain_state(pdomain, &ds);
+    if (ret) return ret;
 
     if (ds.working_counter != sdomain_state.working_counter) {
         // printf("check_domain_state: WC %u.\n", ds.working_counter);
@@ -142,35 +148,27 @@ void check_domain_state(ec_domain_t *pdomain) {
         // printf("check_domain_state: State %u.\n", ds.wc_state);
     }
     sdomain_state = ds;
+    return ret;
 }
 /**
  * @brief   获取从站状态, 并且保存到 全局的sslave_state变量中
  * @param pslave_config 从站
- * @return  void
+ * @return  1:可使用 0:Success, <0:Error code
  */
-void check_master_slave_state(void) {
+int check_master_slave_state(void) {
+    int ret = 0;
+
     ec_slave_config_state_t ss;
     
-    ecrt_slave_config_state(masters[0].pslave_configs[0], &ss);
-    printf("master0==%d Slave state: AL state=0x%02X, online=%d, operational=%d\n",
+    ret = ecrt_slave_config_state(masters[0].pslave_configs[0], &ss);
+    if (ret) return ret;
+    
+    if (ss.operational) ret=1;
+    printf("master0=%d Slave state: AL state=0x%02X, online=%d, operational=%d\n",
             0, ss.al_state, ss.online, ss.operational);
     sslave_state = ss;
-}
-/*
-把这个函数和 void check_master_slave_state(void) 封装到一起
-*/
-static ec_slave_config_state_t ssc_ana_in_state = {};
-int is_all_slave_op()
-{
-    int opCount = 0;
 
-    ecrt_slave_config_state(masters[0].pslave_configs[0], &ssc_ana_in_state);
-    if (ssc_ana_in_state.operational) {
-        opCount++;
-    }
-
-    if ( opCount == 1 ) {return 1;}
-    else {return 0;}
+    return ret;
 }
 
 /**
@@ -184,11 +182,17 @@ uint8_t read_pdo_u8(unsigned int pdo) {
 uint16_t read_pdo_u16(unsigned int pdo) {
     return EC_READ_U16(masters[0].pdomain_pds[0] + pdo);
 }
-int32_t read_pdo_s32(unsigned int pdo) {
-    return EC_READ_S32(masters[0].pdomain_pds[0] + pdo);
-}
 uint32_t read_pdo_u32(unsigned int pdo) {
     return EC_READ_U32(masters[0].pdomain_pds[0] + pdo);
+}
+int8_t read_pdo_s8(unsigned int pdo) {
+    return EC_READ_S8(masters[0].pdomain_pds[0] + pdo);
+}
+int16_t read_pdo_s16(unsigned int pdo) {
+    return EC_READ_S16(masters[0].pdomain_pds[0] + pdo);
+}
+int32_t read_pdo_s32(unsigned int pdo) {
+    return EC_READ_S32(masters[0].pdomain_pds[0] + pdo);
 }
 
 /**
@@ -257,6 +261,26 @@ int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value) {
     EC_WRITE_U32(ecrt_sdo_request_data(psdo), value);
     return ecrt_sdo_request_write(psdo);
 }
+
+/**
+ * @brief   获取电机当前的速度 位置 力矩
+ * @param[out] speed    指向存储速度的 int32_t 变量的指针
+ * @param[out] position 指向存储位置的 int32_t 变量的指针
+ * @param[out] torque   指向存储力矩的 int16_t 变量的指针
+ * @return  成功: 0；失败: -1
+ */
+int get_motor_state(int32_t *speed, int32_t *position, int16_t *torque) {
+    if (!speed || !position || !torque) {
+        return -1;
+    }
+
+    *speed = read_pdo_s32(masters[0].slave_offsets[0].ActualSpe);
+    *position = read_pdo_s32(masters[0].slave_offsets[0].ActualPos);
+    *torque = read_pdo_s16(masters[0].slave_offsets[0].ActualTor);
+
+    return 0;
+}
+
 /**
  * @brief   初始化配置一个从站
  * @param void 

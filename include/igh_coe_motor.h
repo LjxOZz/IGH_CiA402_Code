@@ -133,13 +133,16 @@ typedef struct S_PdoEntryConfig
     unsigned int *offset_ptr;
 } S_PdoEntryConfig;
 
-
+/* init */
 int ecrt_init(void);
+
 
 /* pdo operation */
 uint8_t     read_pdo_u8(unsigned int pdo);
 uint16_t    read_pdo_u16(unsigned int pdo);
 uint32_t    read_pdo_u32(unsigned int pdo);
+int8_t      read_pdo_s8(unsigned int pdo);
+int16_t     read_pdo_s16(unsigned int pdo);
 int32_t     read_pdo_s32(unsigned int pdo);
 
 int write_pdo_u8(unsigned int pdo, uint8_t value);
@@ -150,14 +153,17 @@ int write_pdo_u32(unsigned int pdo, uint32_t value);
 uint32_t read_sdo_u32(ec_sdo_request_t *psdo);
 int write_sdo_u32(ec_sdo_request_t *psdo, uint32_t value);
 
-void check_master_state(ec_master_t *pmaster);
-void check_domain_state(ec_domain_t *pdomain);
-void check_master_slave_state(void);
-int is_all_slave_op();
+/* check state */
+int check_master_state(ec_master_t *pmaster);
+int check_domain_state(ec_domain_t *pdomain);
+int check_master_slave_state(void);
 
 extern ec_sdo_request_t *psdo_profile_velocity;
 extern ec_sdo_request_t *psdo_profile_acce;
 extern ec_sdo_request_t *psdo_profile_dece;
+
+/* interface */
+int get_motor_state(int32_t *speed, int32_t *position, int16_t *torque);
 
 
 #ifdef __cplusplus
