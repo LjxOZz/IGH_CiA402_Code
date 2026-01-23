@@ -11,7 +11,9 @@
 #include <time.h>
 #include <stdint.h>
 
-#include "main.h"
+#include "igh_coe_motor.h"
+
+
 
 /*
 EnterCAT 启动命令

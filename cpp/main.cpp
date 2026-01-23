@@ -1,17 +1,33 @@
-/* 
-CPP封装层
-*/
+#include <string>
 #include <sys/mman.h>
 
-#include "main.hpp"
 #include "nmxrt/publisher.hpp"
 
-#include <string>
+#include "ct_torso_device.hpp"
 
 int create_custom_thread(void);
 
 TcTorsoDevice test;
 
+nmx::rt::Publisher<std::string> pub1("ct_motor0/state/speed");
+nmx::rt::Publisher<std::string> pub2("ct_motor0/state/postion");
+nmx::rt::Publisher<std::string> pub3("ct_motor0/state/torque");
+
+int main() 
+{   
+
+    create_custom_thread();
+    
+    test.run();
+    
+    while (1)
+    {
+        // test.get_joint_state();
+        sleep(1);
+    }
+
+    return 0;
+}
 
 void custom_task(void) {
     if (sPrintCount >= 5000) {
@@ -19,9 +35,9 @@ void custom_task(void) {
         if (check_master_slave_state()) {
             // printf ns time
             printf("period     %d ... %d us\n",
-                   (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
+                (int)(period_min_ns / 1000.0), (int)(period_max_ns / 1000.0));
             printf("exec       %d ... %d us\n",
-                   (int)(exec_min_ns / 1000.0), (int)(exec_max_ns / 1000.0));
+                (int)(exec_min_ns / 1000.0), (int)(exec_max_ns / 1000.0));
             printf("timeOutCount = %ld, continusTimeOut = %d, threadTimeOut = %d\n", 
                     timeOutCount, contTimeCount, threadConTimeOut);
             
@@ -37,10 +53,15 @@ void custom_task(void) {
 
         }
         test.get_joint_state();
+
+        pub1.publish(test.Speed);
+        pub2.publish(test.Position);
+        pub3.publish(test.Torque);
+
         sPrintCount = 0;
+
     }
 }
-
 
 void *custom_thread(void *arg)
 {
@@ -53,22 +74,6 @@ void *custom_thread(void *arg)
         custom_task();
         usleep(sleep_us);
     }
-}
-
-
-int main() 
-{
-    create_custom_thread();
-
-    test.run();
-    
-    while (1)
-    {
-        // test.get_joint_state();
-        sleep(1);
-    }
-
-    return 0;
 }
 
 int create_custom_thread(void) {

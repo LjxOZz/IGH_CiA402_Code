@@ -165,6 +165,8 @@ extern ec_sdo_request_t *psdo_profile_dece;
 /* interface */
 int get_motor_state(int32_t *speed, int32_t *position, int16_t *torque);
 
+extern S_EthercatMaster masters[D_MASTER_AMOUNT];
+extern S_SlaveConfig slave_configs[];
 
 #ifdef __cplusplus
 }

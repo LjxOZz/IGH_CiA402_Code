@@ -26,30 +26,27 @@
  
 # 框架
 
-## C 库提供:
+## ./: c语言实现
 
-1. 电机控制接口: 
+1. 电机控制接口`igh_coe_motor.h`: 
    1. `ecrt_init`
    2. `read_pdo`, `write_pdo`
    3. `read_sdo`, `write_sdo`
-2. 电机模式实时运行时的接口函数: 
+2. 电机模式实时运行时的接口函数`igh_rt_operation.h`: 
    1. `motor_csp_run_cycle`
    2. `motor_pp_run_cycle`
 3. 等等
 
-## Cpp 封装层
+## cpp代码
 
-C++ 层管理线程
+Cpp封装:
 
-实现 **TcTorsoDevice** 类
-
-实现  类
+1. C线程
+2. 实现 **`TcTorsoDevice`** 类
+3. ~nmxrt~
 
 ## tests代码
-
 - [x] 1\. c库接口测试
-- [ ] 2\. cpp实时线程测试
-
 
 # 环境搭建
 

@@ -29,6 +29,10 @@ private:
     // 可能的内部状态
 
 public:
+    std::string Speed;
+    std::string Position;
+    std::string Torque;
+
     TcTorsoDevice() {
 
         ecrt_init();
@@ -79,10 +83,18 @@ public:
             std::cout << "Spe:" << motor0_Speed << std::endl;
             std::cout << "Pos:" << motor0_Position << std::endl;
             std::cout << "Toq:" << motor0_Torque << std::endl;
+
+            Speed = std::to_string(motor0_Speed);
+            Position = std::to_string(motor0_Position);
+            Torque = std::to_string(motor0_Torque);
+
         }
     };
 
 };
+extern "C" {
+    int create_custom_thread(void);
 
+}
 
 #endif

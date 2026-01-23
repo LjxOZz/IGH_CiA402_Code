@@ -153,7 +153,7 @@ int check_domain_state(ec_domain_t *pdomain) {
 /**
  * @brief   获取从站状态, 并且保存到 全局的sslave_state变量中
  * @param pslave_config 从站
- * @return  1:可使用 0:Success, <0:Error code
+ * @return  1:Enter op, 0:Success, <0:Error code
  */
 int check_master_slave_state(void) {
     int ret = 0;
@@ -163,7 +163,7 @@ int check_master_slave_state(void) {
     ret = ecrt_slave_config_state(masters[0].pslave_configs[0], &ss);
     if (ret) return ret;
     
-    if (ss.operational) ret=1;
+    if (ss.al_state == 0x08) ret=1;
     printf("master0=%d Slave state: AL state=0x%02X, online=%d, operational=%d\n",
             0, ss.al_state, ss.online, ss.operational);
     sslave_state = ss;
