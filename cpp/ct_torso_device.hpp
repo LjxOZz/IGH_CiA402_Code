@@ -1,9 +1,8 @@
 /* 
 CPP封装层
-
 */
-#ifndef __MAIN_H
-#define __MAIN_H
+#ifndef __CT_TORSO_DEVICE_HPP_
+#define __CT_TORSO_DEVICE_HPP_
 
 #include <iostream>
 #include <string>
@@ -11,45 +10,33 @@ CPP封装层
 #include "igh_coe_motor.h"
 #include "igh_rt_operation.h"
 
+#include "nmxrt/publisher.hpp"
+
+
+
+extern nmx::rt::Publisher<std::string> pub1;
+extern nmx::rt::Publisher<std::string> pub2;
+extern nmx::rt::Publisher<std::string> pub3;
+
 extern S_EthercatMaster masters[D_MASTER_AMOUNT];
 extern S_SlaveConfig slave_configs[];
 
-
-// class TorsoState {
-// public:
-//     std::string name;   // 关节名称
-//     double pos;         // 关节反馈位置, 单位：rad or m
-//     double vel;         // 关节反馈速度, 单位：rad/s or m/s
-//     double acc;         // 关节反馈加速度, 单位：rad/s^2 or m/s^2
-//     double effort;      // 关节反馈力矩, 单位：Nm
-// };
-
-class TcTorsoDevice {
-private:
-    // 可能的内部状态
-
+class TcTorsoDevice 
+{
 public:
     std::string Speed;
     std::string Position;
     std::string Torque;
 
-    TcTorsoDevice() {
-
-        ecrt_init();
-
-        //this->run();
-
-    }
+    TcTorsoDevice() {ecrt_init();}
     
-    ~TcTorsoDevice() {
-        
-    }
+    ~TcTorsoDevice() {}
 
-    void run(void) {
-        // create_custom_thread();
-
-        create_motor_thread();
-    };
+    /**
+     * @brief Start running thread
+     *
+     */
+    void run(void);
 
     /**
      * @brief 位置步进
@@ -72,29 +59,27 @@ public:
      * @return 
      */
     int move_joint(float pos, float vel, float acc, bool blocking, int opts);
+
     /**
      * @brief Obtain joint status
      *
      * @return joint status
      */
-    void get_joint_state(void) {
-        if (check_master_slave_state()) {
-            get_status_flags = true;
-            std::cout << "Spe:" << motor0_Speed << std::endl;
-            std::cout << "Pos:" << motor0_Position << std::endl;
-            std::cout << "Toq:" << motor0_Torque << std::endl;
+    int get_joint_state(void);
 
-            Speed = std::to_string(motor0_Speed);
-            Position = std::to_string(motor0_Position);
-            Torque = std::to_string(motor0_Torque);
-
-        }
-    };
+private:
+    // 可能的内部状态
 
 };
-extern "C" {
-    int create_custom_thread(void);
 
+extern TcTorsoDevice test;
+
+
+
+typedef void* (*thread_func_ptr)(void*);
+
+extern "C" {
+    int create_custom_thread(thread_func_ptr thread_func);
 }
 
 #endif

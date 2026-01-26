@@ -1,0 +1,20 @@
+// nmx_msg/Joint.proto
+syntax = "proto3";
+
+package nmx.msg;
+
+message JointCmd {
+  string name = 1;
+  double pos = 2;
+  double vel = 3;
+  double acc = 4;
+  double effort = 5;
+}
+
+message JointState {
+  string name = 1;
+  double pos = 2;
+  double vel = 3;
+  double acc = 4;
+  double effort = 5;
+}
