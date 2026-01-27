@@ -19,9 +19,8 @@ void *custom_thread(void *arg) {
         if (sPrintCount >= 5000) {
 
             test.get_joint_state();
-            pub1.publish(test.Speed);
-            pub2.publish(test.Position);
-            pub3.publish(test.Torque);
+
+            test.pub_msg.publish(test.State);
 
             if (check_master_slave_state()) {   // printf ns time
                 printf("EnterCAT: period     %d ... %d us\n",
@@ -119,11 +118,11 @@ int TcTorsoDevice::get_joint_state(void) {
         std::cout << "Pos:" << motor0_Position << std::endl;
         std::cout << "Toq:" << motor0_Torque << std::endl;
 
-
-
-        Speed = std::to_string(motor0_Speed);
-        Position = std::to_string(motor0_Position);
-        Torque = std::to_string(motor0_Torque);
+        State.set_name("ct_motor0_state");
+        State.set_pos(motor0_Position);
+        State.set_vel(motor0_Speed);
+        State.set_effort(motor0_Torque);
+        State.set_acc(0.0);
     }
     return ret;
 };

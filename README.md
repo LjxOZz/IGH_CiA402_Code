@@ -6,7 +6,7 @@
 
 1. EnterCAT控制电机Pp模式运动
 2. 目前只控制了一个电机, 但留了多主站,多从站的接口(没有写对应的处理API)
-3. Pub操作
+3. Pub protobuf操作
 
 ## 计划修改
 
@@ -21,7 +21,7 @@
 - [x] 5\. 接入`nmxrt`库 ---1.26
   - [x] 5.1 重写`CMakeList.txt`框架 ---1.26
   - [x] 5.2 实现`publisher`电机状态 (速度,位置,力矩,等等) ---1.26
-  - [ ] 5.3 添加msg(Protocol Buffers) 
+  - [X] 5.3 添加msg(Protocol Buffers) ---1.27
 - [ ] 6\. 实现多从机
   - [ ] 6.1 C库修改API
  
@@ -38,15 +38,23 @@
   - [ ] 2.2\. `motor_csp_run_cycle`
 3. 等等
 
-## cpp代码
+## cpp
 
 Cpp封装:
 
 1. C线程
 2. 实现 **`TcTorsoDevice`** 类
-3. 引用nmxrt
+3. 引用nmxrt 
+4. 引用protobuf
 
-## tests代码
+## msg
+protobuf测试
+
+## python
+- [x] 1\. nmxrt测试
+- [X] 2\. protobuf测试
+
+## tests
 - [x] 1\. c库接口测试
 
 # 环境搭建
@@ -58,17 +66,15 @@ sudo dpkg -i tztek-jetson-service-ethercat-v2.0.deb
 sudo modprobe ec_master
 sudo /etc/init.d/ethercat start
 sudo modprobe ec_generic
-
-
 ```
-
 ## 2.安装nmxrt库
+```
 略
-
+```
 ## 3. Protocol Buffers
 ```
 protoc --cpp_out=./ ./msg/Joint.proto
-
+protoc --proto_path=. --python_out=python msg/Joint.proto
 ```
 ## 3. Build or Run
 ```

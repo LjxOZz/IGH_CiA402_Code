@@ -12,23 +12,27 @@ CPP封装层
 
 #include "nmxrt/publisher.hpp"
 
+#include "Joint.pb.h"
+
+/* nmxrt */
 
 
-extern nmx::rt::Publisher<std::string> pub1;
-extern nmx::rt::Publisher<std::string> pub2;
-extern nmx::rt::Publisher<std::string> pub3;
-
+/* igh_coe */
 extern S_EthercatMaster masters[D_MASTER_AMOUNT];
 extern S_SlaveConfig slave_configs[];
 
 class TcTorsoDevice 
 {
 public:
-    std::string Speed;
-    std::string Position;
-    std::string Torque;
 
-    TcTorsoDevice() {ecrt_init();}
+    nmx::msg::JointState State;
+    nmx::rt::Publisher<nmx::msg::JointState> pub_msg;
+    
+    
+    TcTorsoDevice():pub_msg("ct_motor0/JointState")
+    {
+        ecrt_init();
+    }
     
     ~TcTorsoDevice() {}
 
@@ -73,8 +77,6 @@ private:
 };
 
 extern TcTorsoDevice test;
-
-
 
 typedef void* (*thread_func_ptr)(void*);
 

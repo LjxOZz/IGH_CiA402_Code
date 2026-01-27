@@ -6,6 +6,6 @@ add_executable(ct_torso
     ${CPP_SOURCE_DIR}/ct_torso_device.cpp 
     ${MSG_SOURCE_DIR}/Joint.pb.cc)
 
-target_link_libraries(ct_torso PRIVATE igh_coe nmxrt)
+target_link_libraries(ct_torso PRIVATE igh_coe nmxrt protobuf::libprotobuf)
 
 target_include_directories(ct_torso PRIVATE ${CPP_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/msg)
